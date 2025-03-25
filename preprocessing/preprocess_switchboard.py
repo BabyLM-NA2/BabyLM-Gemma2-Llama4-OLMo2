@@ -11,10 +11,10 @@ def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-
+data_folder = os.getenv('DATA_FOLDER')
 # File paths
-input_file = 'text_data/train_100M/switchboard.train'
-output_file = 'preprocess/switchboard_preprocessed.train'
+input_file = f'data/{data_folder}/switchboard.train'
+output_file = f'data/{data_folder}_cleaned/switchboard_preprocessed.train'
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
 # Read, clean, and write

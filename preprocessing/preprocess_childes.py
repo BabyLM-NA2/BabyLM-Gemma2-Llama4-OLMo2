@@ -1,8 +1,6 @@
-import glob
 import pandas as pd
 import re
-import random
-import tqdm
+import os
 
 # DOCUMENTATION: """https://talkbank.org/manuals/CHAT.pdf"""
 
@@ -221,9 +219,10 @@ def incorporate_metadata(text, record):
 
 
 if __name__ == "__main__":
+    data_folder = os.getenv('DATA_FOLDER')
     # modify to suit storage location
-    input_file = 'text_data/train_100M/childes.train'
-    output_file = 'preprocess/childes_preprocessed.train'
+    input_file = f'data/{data_folder}/childes.train'
+    output_file = f'data/{data_folder}_cleaned/childes_preprocessed.train'
 
     with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
         for line in infile:

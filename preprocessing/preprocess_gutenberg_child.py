@@ -23,8 +23,9 @@ def clean_gutenberg_text(text):
     return text
 
 # File paths
-input_file = 'text_data/train_100M/gutenberg.train'
-output_dir = 'preprocess'
+data_folder = os.getenv('DATA_FOLDER')
+input_file = f'data/{data_folder}/gutenberg.train'
+output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
 output_file = os.path.join(output_dir, 'gutenberg_preprocessed.train')
 

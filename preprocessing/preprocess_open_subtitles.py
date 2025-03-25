@@ -2,17 +2,19 @@ import re
 import unicodedata
 import os
 
+
+data_folder = os.getenv('DATA_FOLDER')
 # Load dataset
 # List of input training files to be preprocessed
 input_files = [
-    'text_data/train_100M/switchboard.train',
-    'text_data/train_100M/simple_wiki.train',
-    'text_data/train_100M/open_subtitles.train',
-    'text_data/train_100M/gutenberg.train'
+    f'data/{data_folder}/switchboard.train',
+    f'data/{data_folder}/simple_wiki.train',
+    f'data/{data_folder}/open_subtitles.train',
+    f'data/{data_folder}/gutenberg.train'
 ]
 
 # Directory where preprocessed files will be saved
-output_dir = 'preprocess'
+output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
 
 # Function to clean and normalize a single line of text
