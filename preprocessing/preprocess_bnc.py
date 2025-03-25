@@ -14,9 +14,10 @@ def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+data_folder = os.getenv('DATA_FOLDER')
 
-input_file = 'text_data/train_100M/bnc_spoken.train'
-output_dir = 'preprocess'
+input_file = f'data/{data_folder}/bnc_spoken.train'
+output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
 
 output_file = os.path.join(output_dir, 'bnc_spoken_preprocessed.train')

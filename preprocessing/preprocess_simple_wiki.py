@@ -13,10 +13,10 @@ def preprocess_text(text):
     text = re.sub(r'\s+', ' ', text).strip()  # remove extra spaces
     return text
 
-
+data_folder = os.getenv('DATA_FOLDER')
 # Input/Output Paths
-input_file = 'text_data/train_100M/simple_wiki.train'
-output_file = 'preprocess/simple_wiki_preprocessed.train'
+input_file = f'data/{data_folder}/simple_wiki.train'
+output_file = f'data/{data_folder}_cleaned/simple_wiki_preprocessed.train'
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
 
