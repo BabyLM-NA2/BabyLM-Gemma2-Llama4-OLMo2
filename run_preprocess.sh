@@ -7,7 +7,7 @@
 #SBATCH --mail-type=ALL
 
 # Select Data Folder to clean
-export DATA_FOLDER=train_100M
+export DATA_FOLDER=$1
 
 # Load required modules
 module load Anaconda3/2024.02-1
@@ -28,16 +28,23 @@ SCRIPT_FOLDER="./preprocessing"
 
 # Check if the folder exists
 if [ -d "$SCRIPT_FOLDER" ]; then
-    echo "Running all Python scripts in the folder: $SCRIPT_FOLDER"
+    echo "Running Python scripts starting with 'preprocess' in the folder: $SCRIPT_FOLDER"
     
     # Loop through each .py file in the folder
     for script in "$SCRIPT_FOLDER"/*.py; do
         # Check if the file exists (to avoid errors if no .py files are found)
         if [ -f "$script" ]; then
-            echo "Running $script..."
-            python "$script"
+            # Get just the filename without the path
+            basename_script=$(basename "$script")
+            
+            # Check if the script name starts with 'preprocess'
+            if [[ "$basename_script" == preprocess* ]]; then
+                echo "Running $script..."
+                python "$script"
+            fi
         else
             echo "No Python scripts found in $SCRIPT_FOLDER."
+            break  # Exit the loop if no files are found
         fi
     done
 else

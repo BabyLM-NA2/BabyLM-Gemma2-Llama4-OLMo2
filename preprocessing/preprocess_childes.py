@@ -1,6 +1,9 @@
+import glob
 import pandas as pd
 import re
-import os
+import random
+import tqdm
+import os 
 
 # DOCUMENTATION: """https://talkbank.org/manuals/CHAT.pdf"""
 
@@ -43,6 +46,38 @@ def get_record(filename):
         "participants": participants
     }
     return record
+
+
+def merge_consecutive_speakers(text):
+    # Merge content from consecutive speakers
+    lines = text.split('\n')
+    merged = []
+    current_speaker = None
+    current_content = []
+    
+    for line in lines:
+        # Match speaker labels
+        speaker_match = re.match(r'^(\*\w+:\t)(.+)', line)
+        if speaker_match:
+            speaker_tag, content = speaker_match.groups()
+            # Check if it is the same speaker
+            if speaker_tag == current_speaker:
+                current_content.append(content)
+            else:
+                # Write the previous speaker's content
+                if current_speaker:
+                    merged.append(f"{current_speaker}{' '.join(current_content)}")
+                current_speaker = speaker_tag
+                current_content = [content]
+        else:
+            # Non-speech lines are directly reserved
+            merged.append(line)
+    
+    # Handling the last speaker
+    if current_speaker:
+        merged.append(f"{current_speaker}{' '.join(current_content)}")
+    
+    return '\n'.join(merged)
 
 
 DEBUG = False
@@ -193,7 +228,10 @@ def process_text(textstring):
     textstring = textstring.lower()
 
     # Remove all punctuation/special characters except letters, numbers, spaces, and square brackets
-    textstring = re.sub(r"[^\w\s\[\]]+", "", textstring)
+    textstring = re.sub(r"[^\w\s\[\]'\-]+", "", textstring)
+
+    # Merge consecutive speeches
+    textstring = merge_consecutive_speakers(textstring)
 
     # Remove bracketed insertions or annotations inside utterances
     textstring = re.sub(r"\[[^\[\]]*?\]", "", textstring)
@@ -220,11 +258,13 @@ def incorporate_metadata(text, record):
 
 if __name__ == "__main__":
     data_folder = os.getenv('DATA_FOLDER')
-    # modify to suit storage location
     input_file = f'data/{data_folder}/childes.train'
-    output_file = f'data/{data_folder}_cleaned/childes_preprocessed.train'
+    output_dir = f'data/{data_folder}_cleaned'
+    os.makedirs(output_dir, exist_ok=True)  # Automatically create output directories
+    output_file = os.path.join(output_dir, 'childes_preprocessed.train')
 
-    with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
+    with open(input_file, 'r', encoding='utf-8') as infile, \
+         open(output_file, 'w', encoding='utf-8') as outfile:
         for line in infile:
             if line.strip().startswith('%'):  # Skip %int:, %com:, etc.
                 continue
@@ -232,17 +272,8 @@ if __name__ == "__main__":
                 continue
 
             cleaned = process_text(line).strip()
-
-            # Skip lines that become blank after processing
-            if not cleaned:
-                continue
-
-            # Skip lines that only contain bracketed annotations (even multiple, comma-separated)
-            if re.match(r"^\s*(\[[^\]]+\]\s*,?\s*)+$", cleaned):
-                continue
-
-            outfile.write(cleaned + '\n')
+            
+            if cleaned:
+                outfile.write(cleaned + '\n')
 
     print(f"Finished preprocessing. Saved to {output_file}")
-
-

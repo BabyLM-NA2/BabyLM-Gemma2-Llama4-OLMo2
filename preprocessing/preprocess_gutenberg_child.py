@@ -3,13 +3,14 @@ import re
 import unicodedata
 from tqdm import tqdm
 
-# This program could cost hours to finish the preprocessing
 # Preprocessing function 
 def preprocess_text(text):
+    # Normalize text and preserve basic punctuation
     text = text.lower()
     text = unicodedata.normalize("NFKC", text)  # Normalize Unicode characters
-    text = re.sub(r'[^a-z0-9\s]', '', text)  # Remove all punctuation/special characters
-    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
+    # Keep basic punctuation: . , ! ? ' and spaces
+    text = re.sub(r'[^a-z0-9\s.,!?\']', '', text)  # Modified regex
+    text = re.sub(r'\s+', ' ', text).strip()  # Collapse multiple whitespaces
     return text
 
 # Remove Gutenberg-specific metadata and noise
@@ -31,11 +32,13 @@ output_file = os.path.join(output_dir, 'gutenberg_preprocessed.train')
 
 seen_lines = set()
 
-with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
+with open(input_file, 'r', encoding='utf-8') as infile, \
+     open(output_file, 'w', encoding='utf-8') as outfile:
+    
     for line in tqdm(infile, desc="Processing Gutenberg"):
         line = line.strip().lower()
 
-        # Combined filter conditions for speed
+        # Skip metadata lines
         if (
             line.startswith('=') or
             re.search(r'(http[s]?://|www\.)\S+', line) or
@@ -49,22 +52,8 @@ with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', e
         # Clean and normalize
         cleaned = preprocess_text(clean_gutenberg_text(line))
 
-        # Skip empty
-        if not cleaned:
-            continue
-
-        # Efficient duplicate removal logic (keep only longest variation)
-        word_count = len(cleaned.split())
-        if 3 <= word_count <= 20:
-            is_sub = any(cleaned in s or s in cleaned for s in seen_lines)
-            to_remove = {s for s in seen_lines if s in cleaned or cleaned in s}
-        else:
-            is_sub = False
-            to_remove = set()
-
-        if not is_sub:
-            seen_lines.difference_update(to_remove)
+        # Write valid lines directly without duplicate checking
+        if cleaned:
             outfile.write(cleaned + '\n')
-            seen_lines.add(cleaned)
 
 print(f"✅ Finished preprocessing: {input_file} → {output_file}")

@@ -4,62 +4,42 @@ import os
 
 
 data_folder = os.getenv('DATA_FOLDER')
-# Load dataset
-# List of input training files to be preprocessed
-input_files = [
-    f'data/{data_folder}/switchboard.train',
-    f'data/{data_folder}/simple_wiki.train',
-    f'data/{data_folder}/open_subtitles.train',
-    f'data/{data_folder}/gutenberg.train'
-]
 
-# Directory where preprocessed files will be saved
+# Load dataset
+input_files = [f'data/{data_folder}open_subtitles.train']
 output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
 
-# Function to clean and normalize a single line of text
+# Clean and normalize text while preserving basic punctuation
 def preprocess_text(text):
-    # Convert to lowercase
+    
     text = text.lower()
-
-    # Normalize Unicode characters
-    text = unicodedata.normalize("NFKC", text) 
-
-    # Remove segments like = = = PG21374 = = =
-    text = re.sub(r'\s*=+\s*[^=]+?\s*=+\s*', ' ', text)
-
-    # Remove URLs
-    text = re.sub(r'http\S+|www\S+', '', text)  
-
-    # Remove all punctuation/special characters except letters/numbers/spaces
-    text = re.sub(r'[^a-z0-9\s]', '', text)  
-
-    # Limit repeated characters (e.g., loooove -> loove)
-    text = re.sub(r'(.)\1{2,}', r'\1\1', text)  
-
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text).strip()  
-
-    # Remove speaker identifiers (everything before and including the first colon)
-    text = re.sub(r'^\s*[^:]+:\s*', '', text)
-
+    text = unicodedata.normalize("NFKC", text)  # Normalize Unicode characters
+    
+    # Preserve basic punctuation: . , ! ? '
+    text = re.sub(r'[^a-z0-9\s.,!?\']', '', text)  # Modified regex
+    
+    # Preserve essential formatting
+    text = re.sub(r'\s*=+\s*[^=]+?\s*=+\s*', ' ', text)  # Remove metadata markers
+    text = re.sub(r'http\S+|www\S+', '', text)  # Remove URLs
+    text = re.sub(r'(.)\1{2,}', r'\1\1', text)  # Limit repeated characters
+    text = re.sub(r'\s+', ' ', text).strip()  # Normalize whitespace
+    text = re.sub(r'^\s*[^:]+:\s*', '', text)  # Remove speaker identifiers
+    
     return text
 
 # Process each file in the input list
 for input_file in input_files:
-
-    # Extract the base filename and create a corresponding output file name
     filename = os.path.basename(input_file)
     name, ext = os.path.splitext(filename)
     output_file = os.path.join(output_dir, f"{name}_preprocessed{ext}")
 
-    # Open input and output files
-    with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8') as outfile:
-        # Process each line in the input file
+    with open(input_file, 'r', encoding='utf-8') as infile, \
+         open(output_file, 'w', encoding='utf-8') as outfile:
+        
         for line in infile:
-                cleaned_line = preprocess_text(line)
-                if cleaned_line:
-                    outfile.write(cleaned_line + '\n')
+            cleaned_line = preprocess_text(line)
+            if cleaned_line:
+                outfile.write(cleaned_line + '\n')
 
-    # Log progress to console
     print(f"Processed {input_file} -> {output_file}")
