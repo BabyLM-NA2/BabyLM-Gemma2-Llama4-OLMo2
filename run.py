@@ -1,10 +1,13 @@
 import argparse
 import subprocess
+from babylm_dataset import train_tokenizer, BabylmDataset
 
 
 parser = argparse.ArgumentParser(description='Preprocessing script')
-parser.add_argument('--data_folder', type=str, required=False, default='train_10M',
-                  help='The data folder to process')
+parser.add_argument('--data_folder', type=str, required=False, 
+                    default='train_10M', 
+                    choices=['train_10M', 'train_100M', 'dev', 'test'],
+                    help='The data folder to process inside the ./data folder')
 args = parser.parse_args()
 
 def clean_data(data_folder: str = args.data_folder) -> None:
@@ -17,7 +20,7 @@ def clean_data(data_folder: str = args.data_folder) -> None:
     # Run the bash script with the data_folder argument
     try:
         subprocess.run(['chmod', '+x', bash_script])
-        result = subprocess.run([bash_script, args.data_folder], 
+        result = subprocess.run([bash_script, data_folder], 
                             check=True, 
                             text=True,
                             capture_output=True)
@@ -28,4 +31,9 @@ def clean_data(data_folder: str = args.data_folder) -> None:
     
 
 if __name__ == "__main__":
-    clean_data(data_folder=args.data_folder)
+    # Clean Training set
+    # clean_data(data_folder=args.data_folder)
+    # Clean Validation set
+    clean_data(data_folder='dev')
+    # Train Tokenizer
+    train_tokenizer(data_folder=args.data_folder)
