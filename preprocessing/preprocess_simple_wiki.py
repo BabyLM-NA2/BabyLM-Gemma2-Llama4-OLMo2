@@ -16,8 +16,8 @@ def preprocess_text(text):
 
 data_folder = os.getenv('DATA_FOLDER')
 # Input/Output Paths
-input_file = f'data/{data_folder}/simple_wiki.train'
-output_file = f'data/{data_folder}_cleaned/simple_wiki_preprocessed.train'
+input_file = f'data/{data_folder}/simple_wiki.train' if data_folder != 'dev' else f'data/{data_folder}/simple_wiki.dev'
+output_file = f'data/{data_folder}_cleaned/simple_wiki.train' if data_folder != 'dev' else f'data/{data_folder}_cleaned/simple_wiki.dev'
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
 

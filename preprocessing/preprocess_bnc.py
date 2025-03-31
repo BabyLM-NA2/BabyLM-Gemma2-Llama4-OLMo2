@@ -16,10 +16,10 @@ def preprocess_text(text):
 
 def main():
     data_folder = os.getenv('DATA_FOLDER')
-    input_file = f'data/{data_folder}/bnc_spoken.train'
+    input_file = f'data/{data_folder}/bnc_spoken.train' if data_folder != 'dev' else f'data/{data_folder}/bnc_spoken.dev'
     output_dir = f'data/{data_folder}_cleaned'
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, 'bnc_spoken.train')
+    output_file = os.path.join(output_dir, 'bnc_spoken.train') if data_folder != 'dev' else os.path.join(output_dir, 'bnc_spoken.dev')
 
     try:
         with open(input_file, 'r', encoding='utf-8') as infile, \

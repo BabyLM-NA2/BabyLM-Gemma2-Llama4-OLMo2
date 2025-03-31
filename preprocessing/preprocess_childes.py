@@ -258,10 +258,10 @@ def incorporate_metadata(text, record):
 
 if __name__ == "__main__":
     data_folder = os.getenv('DATA_FOLDER')
-    input_file = f'data/{data_folder}/childes.train'
+    input_file = f'data/{data_folder}/childes.train' if data_folder != 'dev' else f'data/{data_folder}/childes.dev'
     output_dir = f'data/{data_folder}_cleaned'
     os.makedirs(output_dir, exist_ok=True)  # Automatically create output directories
-    output_file = os.path.join(output_dir, 'childes_preprocessed.train')
+    output_file = os.path.join(output_dir, 'childes.train') if data_folder != 'dev' else os.path.join(output_dir, 'childes.dev')
 
     with open(input_file, 'r', encoding='utf-8') as infile, \
          open(output_file, 'w', encoding='utf-8') as outfile:

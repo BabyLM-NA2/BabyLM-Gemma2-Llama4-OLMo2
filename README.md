@@ -77,8 +77,3 @@ Once your changes are pushed to GitHub, you can create a pull request (PR) to pr
 3. **Add a title and description** for your pull request, explaining what changes you made and why they should be merged.
 
 4. **Click "Create pull request"** to submit your PR.
-4. **Push the updates to your fork:**
-
-   ```bash
-   git push origin main
-   ```
