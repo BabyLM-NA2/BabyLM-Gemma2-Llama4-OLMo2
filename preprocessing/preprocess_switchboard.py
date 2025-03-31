@@ -13,8 +13,8 @@ def preprocess_text(text):
 
 data_folder = os.getenv('DATA_FOLDER')
 # File paths
-input_file = f'data/{data_folder}/switchboard.train'
-output_file = f'data/{data_folder}_cleaned/switchboard_preprocessed.train'
+input_file = f'data/{data_folder}/switchboard.train' if data_folder != 'dev' else f'data/{data_folder}/switchboard.dev'
+output_file = f'data/{data_folder}_cleaned/switchboard.train' if data_folder != 'dev' else f'data/{data_folder}_cleaned/switchboard.dev'
 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
 # Read, clean, and write

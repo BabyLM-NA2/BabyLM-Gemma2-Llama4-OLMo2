@@ -25,10 +25,10 @@ def clean_gutenberg_text(text):
 
 # File paths
 data_folder = os.getenv('DATA_FOLDER')
-input_file = f'data/{data_folder}/gutenberg.train'
+input_file = f'data/{data_folder}/gutenberg.train' if data_folder != 'dev' else f'data/{data_folder}/gutenberg.dev'
 output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
-output_file = os.path.join(output_dir, 'gutenberg_preprocessed.train')
+output_file = os.path.join(output_dir, 'gutenberg.train') if data_folder != 'dev' else os.path.join(output_dir, 'gutenberg.dev')
 
 seen_lines = set()
 

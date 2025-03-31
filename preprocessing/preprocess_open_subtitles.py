@@ -6,7 +6,7 @@ import os
 data_folder = os.getenv('DATA_FOLDER')
 
 # Load dataset
-input_files = [f'data/{data_folder}open_subtitles.train']
+input_files = [f'data/{data_folder}/open_subtitles.train'] if data_folder != 'dev' else [f'data/{data_folder}/open_subtitles.dev']
 output_dir = f'data/{data_folder}_cleaned'
 os.makedirs(output_dir, exist_ok=True)
 
@@ -32,7 +32,7 @@ def preprocess_text(text):
 for input_file in input_files:
     filename = os.path.basename(input_file)
     name, ext = os.path.splitext(filename)
-    output_file = os.path.join(output_dir, f"{name}_preprocessed{ext}")
+    output_file = os.path.join(output_dir, f"{name}{ext}")
 
     with open(input_file, 'r', encoding='utf-8') as infile, \
          open(output_file, 'w', encoding='utf-8') as outfile:

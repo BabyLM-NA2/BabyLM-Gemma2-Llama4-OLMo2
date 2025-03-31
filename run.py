@@ -44,6 +44,6 @@ if __name__ == "__main__":
     clean_data(data_folder='dev')
     # Train Tokenizer
     gpt2_tokenizer = train_tokenizer(data_folder=args.data_folder, vocab_size=16000)
-    # Create Dataset
+    # # Create Dataset
     train_dataset = BabylmDataset(f'./data/{args.data_folder}_cleaned', SEQ_LENGTH, tokenizer=gpt2_tokenizer, random_chunk=True)
     full_eval_dataset = BabylmDataset('./data/dev_cleaned', SEQ_LENGTH, tokenizer=gpt2_tokenizer, offset=0)
