@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:2
 #SBATCH --gpus-per-node=2
 #SBATCH --mem=64G
-#SBATCH --output=./log/train_model_%j.log
+#SBATCH --output=./output/train_model_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
 #SBATCH --mail-type=ALL
 
@@ -30,7 +30,8 @@ source activate babylm
 export PYTHONUNBUFFERED=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1  # For multi-GPU setups
 export TORCH_EXTENSIONS_DIR=$HOME/.cache/torch_extensions
-export VLLM_WORKER_MULTIPROC_METHOD=spawn
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64 
 
 # Verify PyTorch installation and print version information
 echo "Verifying PyTorch installation..."
@@ -41,8 +42,8 @@ echo "GPU status before execution:"
 nvidia-smi
 
 # Run script without distributed launcher (using built-in model parallelism)
-echo "Running main.py with native model parallelism..."
-python -m run
+echo "Running run.py with native model parallelism..."
+python run.py
 
 # Check execution status
 if [ $? -eq 0 ]; then
