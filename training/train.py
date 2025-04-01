@@ -87,9 +87,9 @@ def convert_to_quantized(model):
 def train_rwkv_with_pretokenized_data(
     model_config=None,
     model_path=None,
-    train_file="./data/train_10M_cleaned/tokenized_GPT2TokenizerFast_16000.pt",
-    val_file="./data/dev/tokenized_GPT2TokenizerFast_16000.pt",
-    tokenizer_name="gpt2",
+    train_file="./data/train_10M_cleaned/tokenized_OLMo2SuperBPE.pt",
+    val_file="./data/dev/tokenized_OLMo2SuperBPE.pt",
+    tokenizer_name="UW/OLMo2-8B-SuperBPE-t180k",
     context_length=1024,
     batch_size=4,
     gradient_accumulation_steps=4,
