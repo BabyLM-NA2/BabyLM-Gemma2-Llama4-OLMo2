@@ -32,6 +32,9 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1  # For multi-GPU setups
 export TORCH_EXTENSIONS_DIR=$HOME/.cache/torch_extensions
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64 
+export BNB_CUDA_VERSION=124
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.4/lib64
+
 
 # Verify PyTorch installation and print version information
 echo "Verifying PyTorch installation..."
@@ -43,7 +46,7 @@ nvidia-smi
 
 # Run script without distributed launcher (using built-in model parallelism)
 echo "Running run.py with native model parallelism..."
-python run.py
+python run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
 
 # Check execution status
 if [ $? -eq 0 ]; then

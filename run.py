@@ -6,10 +6,13 @@ from model.rwkv import RWKVConfig
 
 
 parser = argparse.ArgumentParser(description='Preprocessing script')
+
 parser.add_argument('--data_folder', type=str, required=False, 
                     default='train_10M', 
                     choices=['train_10M', 'train_100M', 'dev', 'test'],
                     help='The data folder to process inside the ./data folder')
+parser.add_argument('--model', type=str, required=False,
+                    default='rwkv')
 parser.add_argument('--vocab_size', type=int, required=False, 
                     default=200000, 
                     help='Define the size of vocaburary for tokenizer.')
@@ -58,15 +61,18 @@ if __name__ == "__main__":
         num_hidden_layers=12,
     )
     
-    # Training example
-    trainer, model = train_rwkv_with_pretokenized_data(
-        model_config=config,
-        train_file=f"./data/{args.data_folder}_cleaned/tokenized_OLMo2SuperBPE.pt",
-        val_file=f"./data/dev_cleaned/tokenized_OLMo2SuperBPE.pt",
-        output_dir="./output/rwkv-trained-model",
-        # context_length=128,
-        # hub_model_id="your-username/rwkv-custom-model"
-    )
+    if args.model == 'rwkv':
+        # Training example
+        trainer, model = train_rwkv_with_pretokenized_data(
+            model_config=config,
+            train_file=f"./data/{args.data_folder}_cleaned/tokenized_OLMo2SuperBPE.pt",
+            val_file=f"./data/dev_cleaned/tokenized_OLMo2SuperBPE.pt",
+            output_dir="./output/rwkv-trained-model",
+            # context_length=128,
+            # hub_model_id="your-username/rwkv-custom-model"
+        )
+    elif args.model == 'llama':
+        pass
     
     # Generate text example
     generated_text = generate_text(

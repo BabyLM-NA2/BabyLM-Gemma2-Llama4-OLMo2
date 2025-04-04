@@ -1,28 +1,57 @@
 # Training and deployment utilities
 import os
 import numpy as np
-# from datasets import load_dataset
-from transformers import AutoTokenizer, Trainer, TrainingArguments, DataCollatorForLanguageModeling
-from huggingface_hub import upload_file, create_repo, HfApi
-from model.rwkv import RWKVForCausalLM, RWKVConfig
 import random
 import torch
 import torch.nn.functional as F
 import torch.quantization
+from transformers import AutoTokenizer, Trainer, TrainingArguments, DataCollatorForLanguageModeling
+from huggingface_hub import upload_file, create_repo, HfApi
+from model.rwkv import RWKVForCausalLM, RWKVConfig
+import bitsandbytes as bnb
+from accelerate import Accelerator
 
-# Dataset class for pre-tokenized data
+# Dataset class for pre-tokenized data with memory-efficient loading
 class PreTokenizedDataset(torch.utils.data.Dataset):
-    def __init__(self, file_path, context_length=1024):
-        # Load the pre-tokenized data
-        self.tokenized_data = torch.load(file_path)
+    def __init__(self, file_path, context_length=1024, chunk_size=1000000):
+        # Load the pre-tokenized data info
+        self.file_path = file_path
         self.context_length = context_length
+        self.chunk_size = chunk_size
+        
+        # Get total size without loading all data
+        temp_data = torch.load(file_path)
+        self.total_length = len(temp_data)
+        del temp_data  # Free memory
+        
+        # Initialize chunk tracking
+        self.current_chunk = None
+        self.current_chunk_idx = -1
+        
+    def _load_chunk(self, chunk_idx):
+        # Load only the necessary chunk of data
+        full_data = torch.load(self.file_path)
+        start_idx = chunk_idx * self.chunk_size
+        end_idx = min(start_idx + self.chunk_size, self.total_length)
+        chunk = full_data[start_idx:end_idx]
+        del full_data  # Free memory
+        return chunk
         
     def __len__(self):
-        return len(self.tokenized_data)
+        return self.total_length
         
     def __getitem__(self, idx):
-        # Get tokenized sample
-        tokens = self.tokenized_data[idx]
+        # Determine which chunk this index belongs to
+        chunk_idx = idx // self.chunk_size
+        
+        # Load chunk if needed
+        if self.current_chunk_idx != chunk_idx:
+            self.current_chunk = self._load_chunk(chunk_idx)
+            self.current_chunk_idx = chunk_idx
+        
+        # Get item from current chunk
+        local_idx = idx % self.chunk_size
+        tokens = self.current_chunk[local_idx]
         
         # Check if tokens is a scalar tensor (0-dimensional)
         if isinstance(tokens, torch.Tensor) and tokens.dim() == 0:
@@ -45,8 +74,6 @@ class PreTokenizedDataset(torch.utils.data.Dataset):
         labels = tokens.clone()
         
         return {"input_ids": inputs, "labels": labels}
-
-
 
 def quantize_model_to_int8(model):
     """
@@ -91,14 +118,16 @@ def train_rwkv_with_pretokenized_data(
     val_file="./data/dev/tokenized_OLMo2SuperBPE.pt",
     tokenizer_name="UW/OLMo2-8B-SuperBPE-t180k",
     context_length=1024,
-    batch_size=4,
-    gradient_accumulation_steps=4,
+    batch_size=1,  # Reduced batch size
+    gradient_accumulation_steps=16,  # Increased accumulation steps
     learning_rate=5e-5,
     num_epochs=3,
     output_dir="./rwkv-trained",
     hub_model_id=None,
     use_quantization=False,
-    quantization_mode="dynamic"  # 'dynamic' or 'qat'
+    quantization_mode="dynamic",  # 'dynamic' or 'qat'
+    use_deepspeed=True,  # Enable DeepSpeed
+    deepspeed_config="ds_config.json"  # Path to DeepSpeed config
 ):
     # Check for CUDA availability
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -124,19 +153,26 @@ def train_rwkv_with_pretokenized_data(
     # Load tokenizer for configuration only (not for tokenization)
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     
-    # Prepare datasets from pre-tokenized files
+    # Prepare datasets from pre-tokenized files with memory-efficient loading
     train_dataset = PreTokenizedDataset(train_file, context_length)
     val_dataset = PreTokenizedDataset(val_file, context_length) if val_file else None
     
-    # Training arguments
+    # Create 8-bit optimizer to save memory
+    optimizer = bnb.optim.AdamW8bit(
+        model.parameters(),
+        lr=learning_rate,
+        weight_decay=0.01
+    )
+    
+    # Training arguments with memory optimizations
     training_args = TrainingArguments(
         output_dir=output_dir,
         per_device_train_batch_size=batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=learning_rate,
         num_train_epochs=num_epochs,
-        fp16=False,  # Enable mixed precision
-        bf16=True,
+        fp16=True,  # Enable mixed precision
+        bf16=False,  # Disable bfloat16 when using fp16
         logging_steps=10,
         dataloader_num_workers=4,  # Parallel data loading
         save_steps=1000,
@@ -145,15 +181,18 @@ def train_rwkv_with_pretokenized_data(
         save_total_limit=3,
         push_to_hub=bool(hub_model_id),
         hub_model_id=hub_model_id,
-        # gradient_checkpointing=True,
+        gradient_checkpointing=True,  # Enable gradient checkpointing
+        deepspeed=deepspeed_config if use_deepspeed else None,  # DeepSpeed integration
+        optim="8bit-adam",  # Use 8-bit optimizer
     )
     
-    # Initialize trainer
+    # Initialize trainer with custom optimizer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
+        optimizers=(optimizer, None),  # Use custom 8-bit optimizer
     )
     
     # Train the model
@@ -275,3 +314,25 @@ def generate_text(
     # Decode generated tokens
     text = tokenizer.decode(generated[0], skip_special_tokens=True)
     return text
+
+# DeepSpeed configuration file (ds_config.json)
+"""
+{
+    "zero_optimization": {
+        "stage": 3,
+        "offload_optimizer": {
+            "device": "cpu"
+        },
+        "offload_param": {
+            "device": "cpu"
+        },
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "reduce_bucket_size": 5e7
+    },
+    "fp16": {
+        "enabled": true
+    },
+    "train_batch_size": 64
+}
+"""
