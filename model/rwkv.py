@@ -288,6 +288,10 @@ class RWKVModel(RWKVPreTrainedModel):
         
         # Initialize weights and apply final processing
         self.post_init()
+    
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, RWKVModel):
+            module.gradient_checkpointing = value
         
     def get_input_embeddings(self):
         return self.emb
@@ -303,12 +307,14 @@ class RWKVModel(RWKVPreTrainedModel):
         inputs_embeds=None,
         output_hidden_states=None,
         return_dict=None,
-    ):
+        ):
+        # Standard setup code
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        
+
+        # Input handling
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
@@ -319,44 +325,53 @@ class RWKVModel(RWKVPreTrainedModel):
             input_shape = inputs_embeds.size()[:-1]
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
-            
+
         # Initialize states if not provided
         if states is None:
             states = [None] * len(self.blocks)
         new_states = []
-        
+
         # Process through the layers
         hidden_states = inputs_embeds
         all_hidden_states = () if output_hidden_states else None
-        
+
         for i, block in enumerate(self.blocks):
             if self.gradient_checkpointing and self.training:
+                # DDP-compatible checkpointing - critical fix
                 def create_custom_forward(module):
-                    def custom_forward(*inputs):
-                        return module(*inputs)
+                    def custom_forward(hidden_states, attention_mask=None, state=None):
+                        return module(hidden_states, attention_mask=attention_mask, state=state)[0]
                     return custom_forward
-                
+
                 layer_outputs = torch.utils.checkpoint.checkpoint(
                     create_custom_forward(block),
+                    hidden_states,
+                    attention_mask,
+                    states[i] if states else None
+                )
+                hidden_states = layer_outputs
+                # Still need to compute states for consistency
+                _, new_state = block(
                     hidden_states,
                     attention_mask=attention_mask,
                     state=states[i] if states else None
                 )
+                new_states.append(new_state)
             else:
                 layer_outputs = block(
                     hidden_states,
                     attention_mask=attention_mask,
                     state=states[i] if states else None
                 )
-            hidden_states = layer_outputs[0]
-            new_states.append(layer_outputs[1])
-        
-        # Final LayerNorm
+                hidden_states = layer_outputs[0]
+                new_states.append(layer_outputs[1])
+
+        # Rest of your forward method stays the same
         hidden_states = self.ln_out(hidden_states)
-        
+
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
-            
+
         if return_dict:
             return {
                 "last_hidden_state": hidden_states,
@@ -420,35 +435,22 @@ class RWKVForCausalLM(RWKVPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
         use_cache=None,
-    ):
+        ):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
+        if self.gradient_checkpointing and self.training:
+            use_cache = False
+            
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         
-        # Gradient checkpointing logic
-        if self.gradient_checkpointing and self.training:
-            def create_custom_forward(module):
-                def custom_forward(*inputs):
-                    return module(*inputs)
-                return custom_forward
-            
-            outputs = torch.utils.checkpoint.checkpoint(
-                create_custom_forward(self.rwkv),
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                states=states,
-                inputs_embeds=inputs_embeds,
-                output_hidden_states=output_hidden_states,
-                return_dict=True,
-            )
-        else:
-            outputs = self.rwkv(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                states=states,
-                inputs_embeds=inputs_embeds,
-                output_hidden_states=output_hidden_states,
-                return_dict=True,
-            )
+        # Standard forward pass without nested checkpointing
+        outputs = self.rwkv(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            states=states,
+            inputs_embeds=inputs_embeds,
+            output_hidden_states=output_hidden_states,
+            return_dict=True,
+        )
         
         # Get the last hidden state
         hidden_states = outputs["last_hidden_state"]

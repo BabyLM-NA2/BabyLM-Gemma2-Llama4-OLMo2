@@ -45,7 +45,7 @@ nvidia-smi
 echo "Running run.py with native model parallelism..."
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 # python run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
-torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
+torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128 --batch_size=32
 # deepspeed --num_gpus=$NUM_GPUS run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
 
 # Check execution status

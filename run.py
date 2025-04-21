@@ -19,6 +19,9 @@ parser.add_argument('--vocab_size', type=int, required=False,
 parser.add_argument('--seq_length', type=int, required=False, 
                     default=128, 
                     help='Defines how many tokens (words or subwords) a model processes at once.')
+parser.add_argument('--batch_size', type=int, required=False, 
+                    default=8, 
+                    help='Batch Size for Training')
 args = parser.parse_args()
 
 def clean_data(data_folder: str = args.data_folder) -> None:
@@ -44,9 +47,9 @@ def clean_data(data_folder: str = args.data_folder) -> None:
 if __name__ == "__main__":
     SEQ_LENGTH = args.seq_length
     # Clean Training set
-    # clean_data(data_folder=args.data_folder)
+    clean_data(data_folder=args.data_folder)
     # Clean Validation set
-    # clean_data(data_folder='dev')
+    clean_data(data_folder='dev')
     # Train Tokenizer
     tokenizer = load_olmo_tokenizer()
     # Create Dataset
@@ -67,9 +70,8 @@ if __name__ == "__main__":
             model_config=config,
             train_file=f"./data/{args.data_folder}_cleaned/tokenized_OLMo2SuperBPE.pt",
             val_file=f"./data/dev_cleaned/tokenized_OLMo2SuperBPE.pt",
-            output_dir="./output/rwkv-trained-model",
-            # context_length=128,
-            # hub_model_id="your-username/rwkv-custom-model"
+            output_dir=f"./output/rwkv-trained-model-{args.data_folder}",
+            batch_size=args.batch_size
         )
     elif args.model == 'llama':
         pass
