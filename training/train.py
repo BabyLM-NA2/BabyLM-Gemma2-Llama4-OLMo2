@@ -35,6 +35,7 @@ class PreTokenizedDataset(torch.utils.data.Dataset):
         end_idx = min(start_idx + self.chunk_size, self.total_length)
         chunk = full_data[start_idx:end_idx]
         del full_data  # Free memory
+        torch.cuda.empty_cache()
         return chunk
         
     def __len__(self):
@@ -118,14 +119,14 @@ def train_rwkv_with_pretokenized_data(
     val_file="./data/dev/tokenized_OLMo2SuperBPE.pt",
     tokenizer_name="UW/OLMo2-8B-SuperBPE-t180k",
     context_length=1024,
-    batch_size=4,  # Reduced batch size
-    gradient_accumulation_steps=16,  # Increased accumulation steps
+    batch_size=8,
+    gradient_accumulation_steps=16,
     learning_rate=5e-5,
     num_epochs=3,
     output_dir="./rwkv-trained",
     hub_model_id=None,
     use_quantization=False,
-    quantization_mode="dynamic",  # 'dynamic' or 'qat'
+    quantization_mode="dynamic",
     use_deepspeed=True,  # Enable DeepSpeed
     deepspeed_config="ds_config.json"  # Path to DeepSpeed config
 ):
@@ -176,12 +177,12 @@ def train_rwkv_with_pretokenized_data(
         fp16=True,
         bf16=False,
         logging_steps=10,
-        dataloader_num_workers=4,
+        dataloader_num_workers=2,
         save_steps=1000,
         save_total_limit=3,
         push_to_hub=bool(hub_model_id),
         hub_model_id=hub_model_id,
-        gradient_checkpointing=False,  # Enable this!
+        gradient_checkpointing=True,
         deepspeed=deepspeed_config if use_deepspeed else None,
         # For better multi-GPU handling
         local_rank=-1,  # Managed by distributed launcher
