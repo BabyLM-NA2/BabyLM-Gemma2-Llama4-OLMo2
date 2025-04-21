@@ -44,9 +44,9 @@ def clean_data(data_folder: str = args.data_folder) -> None:
 if __name__ == "__main__":
     SEQ_LENGTH = args.seq_length
     # Clean Training set
-    clean_data(data_folder=args.data_folder)
+    # clean_data(data_folder=args.data_folder)
     # Clean Validation set
-    clean_data(data_folder='dev')
+    # clean_data(data_folder='dev')
     # Train Tokenizer
     tokenizer = load_olmo_tokenizer()
     # Create Dataset
