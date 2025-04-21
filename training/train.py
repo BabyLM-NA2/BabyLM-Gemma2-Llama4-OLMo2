@@ -5,11 +5,11 @@ import random
 import torch
 import torch.nn.functional as F
 import torch.quantization
-from transformers import AutoTokenizer, Trainer, TrainingArguments, DataCollatorForLanguageModeling
-from huggingface_hub import upload_file, create_repo, HfApi
+from transformers import AutoTokenizer, Trainer, TrainingArguments
+from transformers.optimization import Adafactor
+
 from model.rwkv import RWKVForCausalLM, RWKVConfig
-import bitsandbytes as bnb
-from accelerate import Accelerator
+
 
 # Dataset class for pre-tokenized data with memory-efficient loading
 class PreTokenizedDataset(torch.utils.data.Dataset):
@@ -118,7 +118,7 @@ def train_rwkv_with_pretokenized_data(
     val_file="./data/dev/tokenized_OLMo2SuperBPE.pt",
     tokenizer_name="UW/OLMo2-8B-SuperBPE-t180k",
     context_length=1024,
-    batch_size=1,  # Reduced batch size
+    batch_size=4,  # Reduced batch size
     gradient_accumulation_steps=16,  # Increased accumulation steps
     learning_rate=5e-5,
     num_epochs=3,
@@ -158,11 +158,13 @@ def train_rwkv_with_pretokenized_data(
     val_dataset = PreTokenizedDataset(val_file, context_length) if val_file else None
     
     # Create 8-bit optimizer to save memory
-    optimizer = bnb.optim.AdamW8bit(
+    optimizer = Adafactor(
         model.parameters(),
         lr=learning_rate,
-        weight_decay=0.01
-    )
+        relative_step=False,
+        scale_parameter=False,
+        warmup_init=False
+        )
     
     # Training arguments with memory optimizations
     training_args = TrainingArguments(
@@ -171,20 +173,21 @@ def train_rwkv_with_pretokenized_data(
         gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=learning_rate,
         num_train_epochs=num_epochs,
-        fp16=True,  # Enable mixed precision
-        bf16=False,  # Disable bfloat16 when using fp16
+        fp16=True,
+        bf16=False,
         logging_steps=10,
-        dataloader_num_workers=4,  # Parallel data loading
+        dataloader_num_workers=4,
         save_steps=1000,
-        evaluation_strategy="steps" if val_dataset else "no",
-        eval_steps=1000 if val_dataset else None,
         save_total_limit=3,
         push_to_hub=bool(hub_model_id),
         hub_model_id=hub_model_id,
-        gradient_checkpointing=True,  # Enable gradient checkpointing
-        deepspeed=deepspeed_config if use_deepspeed else None,  # DeepSpeed integration
-        optim="8bit-adam",  # Use 8-bit optimizer
-    )
+        gradient_checkpointing=False,  # Enable this!
+        deepspeed=deepspeed_config if use_deepspeed else None,
+        # For better multi-GPU handling
+        local_rank=-1,  # Managed by distributed launcher
+        ddp_find_unused_parameters=False,  # More efficient DDP
+        tf32=True,  # For A100 GPUs specifically
+        )
     
     # Initialize trainer with custom optimizer
     trainer = Trainer(
@@ -314,25 +317,3 @@ def generate_text(
     # Decode generated tokens
     text = tokenizer.decode(generated[0], skip_special_tokens=True)
     return text
-
-# DeepSpeed configuration file (ds_config.json)
-"""
-{
-    "zero_optimization": {
-        "stage": 3,
-        "offload_optimizer": {
-            "device": "cpu"
-        },
-        "offload_param": {
-            "device": "cpu"
-        },
-        "overlap_comm": true,
-        "contiguous_gradients": true,
-        "reduce_bucket_size": 5e7
-    },
-    "fp16": {
-        "enabled": true
-    },
-    "train_batch_size": 64
-}
-"""

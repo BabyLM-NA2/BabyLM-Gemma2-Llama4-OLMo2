@@ -1,7 +1,5 @@
 import math
-import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -12,7 +10,6 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 from transformers import PretrainedConfig
 from transformers.utils import logging
-from huggingface_hub import PyTorchModelHubMixin
 
 
 logger = logging.get_logger(__name__)
@@ -278,6 +275,8 @@ class RWKVModel(RWKVPreTrainedModel):
         # Token embeddings
         self.emb = nn.Embedding(config.vocab_size, config.hidden_size)
         
+        self.gradient_checkpointing = False
+        
         # RWKV layers
         self.blocks = nn.ModuleList([
             RWKVBlock(config, layer_id=i)
@@ -331,14 +330,24 @@ class RWKVModel(RWKVPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         
         for i, block in enumerate(self.blocks):
-            if output_hidden_states:
-                all_hidden_states = all_hidden_states + (hidden_states,)
+            if self.gradient_checkpointing and self.training:
+                def create_custom_forward(module):
+                    def custom_forward(*inputs):
+                        return module(*inputs)
+                    return custom_forward
                 
-            layer_outputs = block(
-                hidden_states,
-                attention_mask=attention_mask,
-                state=states[i]
-            )
+                layer_outputs = torch.utils.checkpoint.checkpoint(
+                    create_custom_forward(block),
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    state=states[i] if states else None
+                )
+            else:
+                layer_outputs = block(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    state=states[i] if states else None
+                )
             hidden_states = layer_outputs[0]
             new_states.append(layer_outputs[1])
         
@@ -368,11 +377,18 @@ class RWKVForCausalLM(RWKVPreTrainedModel):
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         
         # Weight tying
-        if config.tie_word_embeddings:
-            self.lm_head.weight = self.rwkv.emb.weight
+        # if config.tie_word_embeddings:
+        #     self.lm_head.weight = self.rwkv.emb.weight
+            
+        self.gradient_checkpointing = False
             
         # Initialize weights and apply final processing
         self.post_init()
+    
+    # Enable gradient checkpointing
+    def _set_gradient_checkpointing(self, module, value=False):
+        if isinstance(module, RWKVModel):
+            module.gradient_checkpointing = value
         
     def get_output_embeddings(self):
         return self.lm_head
@@ -408,15 +424,31 @@ class RWKVForCausalLM(RWKVPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         
-        # Forward through the model
-        outputs = self.rwkv(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            states=states,
-            inputs_embeds=inputs_embeds,
-            output_hidden_states=output_hidden_states,
-            return_dict=True,
-        )
+        # Gradient checkpointing logic
+        if self.gradient_checkpointing and self.training:
+            def create_custom_forward(module):
+                def custom_forward(*inputs):
+                    return module(*inputs)
+                return custom_forward
+            
+            outputs = torch.utils.checkpoint.checkpoint(
+                create_custom_forward(self.rwkv),
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                states=states,
+                inputs_embeds=inputs_embeds,
+                output_hidden_states=output_hidden_states,
+                return_dict=True,
+            )
+        else:
+            outputs = self.rwkv(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                states=states,
+                inputs_embeds=inputs_embeds,
+                output_hidden_states=output_hidden_states,
+                return_dict=True,
+            )
         
         # Get the last hidden state
         hidden_states = outputs["last_hidden_state"]
