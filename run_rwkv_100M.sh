@@ -3,10 +3,10 @@
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
-#SBATCH --gres=gpu:2
-#SBATCH --gpus-per-node=2
+#SBATCH --gres=gpu:4
+#SBATCH --gpus-per-node=4
 #SBATCH --mem=64G
-#SBATCH --output=./output/train_model_%j.log
+#SBATCH --output=./log/train_model_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
 #SBATCH --mail-type=ALL
 
@@ -45,7 +45,7 @@ nvidia-smi
 echo "Running run.py with native model parallelism..."
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 # python run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
-torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128 --batch_size=32
+torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_100M --model=rwkv --vocab_size=200000 --seq_length=128 --batch_size=32
 # deepspeed --num_gpus=$NUM_GPUS run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
 
 # Check execution status
