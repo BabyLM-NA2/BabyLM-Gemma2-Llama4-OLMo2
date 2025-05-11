@@ -93,7 +93,7 @@ if __name__ == "__main__":
     config = RWKVConfig(
         vocab_size=args.vocab_size,
         context_length=1024,
-        hidden_size=768,
+        hidden_size=512,
         num_hidden_layers=12,
     )
     
