@@ -33,14 +33,21 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1  # For multi-GPU setups
 export TORCH_EXTENSIONS_DIR=$HOME/.cache/torch_extensions
 
 # Fix for expandable segments (avoid memory fragmentation)
-export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True,max_split_size_mb:64"
+export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128"
 export BNB_CUDA_VERSION=124
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.4/lib64
 
 # Configure NCCL for better multi-GPU performance
-# export NCCL_P2P_DISABLE=0
-# export NCCL_IB_DISABLE=0
-# export NCCL_DEBUG=WARN
+export NCCL_DEBUG=INFO
+# Use multiple possible interface names instead of just eth0
+export NCCL_SOCKET_IFNAME=en,eth,em,bond,ib
+# Additional performance settings
+export NCCL_IB_TC=128
+export NCCL_IB_GID_INDEX=3
+export NCCL_IB_TIMEOUT=22
+export NCCL_TIMEOUT=1800
+export NCCL_P2P_LEVEL=NVL 
+export TORCH_NCCL_TRACE_BUFFER_SIZE=1000
 
 # Monitor GPU status before running
 echo "GPU status before execution:"
@@ -50,7 +57,12 @@ nvidia-smi
 echo "Running run.py with native model parallelism..."
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 # python run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
-torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128 --batch_size=32
+torchrun --standalone --nproc_per_node=$NUM_GPUS run.py \
+  --data_folder=train_10M \
+  --model=rwkv \
+  --vocab_size=200000 \
+  --seq_length=128 \
+  --batch_size=16
 # deepspeed --num_gpus=$NUM_GPUS run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
 
 # Check execution status

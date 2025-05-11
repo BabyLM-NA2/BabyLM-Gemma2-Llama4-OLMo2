@@ -4,3 +4,4 @@ preprocessed
 __pycache__
 .DS_Store
 test.ipynb
+my_logs
