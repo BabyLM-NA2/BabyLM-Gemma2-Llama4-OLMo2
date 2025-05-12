@@ -19,6 +19,7 @@ import random
 import torch
 import torch.nn.functional as F
 import torch.quantization
+import transformers
 from transformers import AutoTokenizer, Trainer, TrainingArguments
 from transformers.optimization import Adafactor
 from transformers.trainer_callback import TrainerCallback
@@ -27,7 +28,7 @@ from model.llama import LlamaForCausalLM, LlamaConfig
 from model.rwkv import RWKVForCausalLM, RWKVConfig
 
 class CacheFlushCallback(TrainerCallback):
-    def __init__(self, flush_interval=10):
+    def __init__(self, flush_interval=50):
         self.flush_interval = flush_interval
         self.step_count = 0
     
@@ -63,10 +64,10 @@ class PreTokenizedDataset(torch.utils.data.Dataset):
         torch.cuda.empty_cache()  # Clear cache before loading new data
 
         # Load only the necessary chunk of data
-        full_data = torch.load(self.file_path)
+        full_data = torch.load(self.file_path, map_location='cpu')
         start_idx = chunk_idx * self.chunk_size
         end_idx = min(start_idx + self.chunk_size, self.total_length)
-        chunk = full_data[start_idx:end_idx]
+        chunk = full_data[start_idx:end_idx].clone()
         del full_data  # Free memory immediately
 
         # Force cache clearing after deletion
@@ -175,7 +176,7 @@ def train_rwkv_with_pretokenized_data(
     
     # Load or create model
     if model_path:
-        model = RWKVForCausalLM.from_pretrained(model_path)
+        model = transformers.RwkvForCausalLM.from_pretrained(model_path)
     else:
         model = RWKVForCausalLM(model_config)
     
