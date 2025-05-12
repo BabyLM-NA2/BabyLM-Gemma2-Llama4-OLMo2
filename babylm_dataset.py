@@ -4,11 +4,46 @@ from torch.utils.data import Dataset
 from random import randrange
 from pathlib import Path
 from transformers import AutoTokenizer
+from tokenizers import (Tokenizer, decoders, models, pre_tokenizers,
+                        processors, trainers)
+from tokenizers.normalizers import NFKC
+from transformers import GPT2TokenizerFast
+
 
 def load_olmo_tokenizer():
     """Load the pre-trained OLMo2-8B-SuperBPE tokenizer"""
     tokenizer = AutoTokenizer.from_pretrained("UW/OLMo2-8B-SuperBPE-t180k")
-    return tokenizer
+    vocab_size = len(tokenizer.get_vocab())
+    return tokenizer, vocab_size
+
+def train_tokenizer(data_folder: str, vocab_size: int = 25000):
+    """Train Tokenizer on Training Datasets"""
+    
+    # Init Tokenizer
+    tokenizer = Tokenizer(models.BPE())
+    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=True)
+    tokenizer.decoder = decoders.ByteLevel()
+    tokenizer.post_processor = processors.ByteLevel(trim_offsets=True)
+    tokenizer.normalizer = NFKC()
+
+    # Train Tokenizer
+    trainer = trainers.BpeTrainer(vocab_size=vocab_size, min_frequency=2, special_tokens=["<pad>", "<s>", "</s>"])
+    
+    data_dir = Path(f"data/{data_folder}_cleaned")
+    paths = [str(f) for f in data_dir.glob("*") if f.is_file() and f.suffix in [".train"]]
+    tokenizer.train(paths, trainer)
+
+    # Save Tokenizer File
+    tokenizer_path =  f"tokenizer-{vocab_size}.json"
+    tokenizer.save(str(tokenizer_path), pretty=True)
+    
+    # Embedding
+    gpt2_tokenizer = GPT2TokenizerFast(tokenizer_file= str(tokenizer_path))
+    gpt2_tokenizer.bos_token = "<s>"
+    gpt2_tokenizer.eos_token = "</s>"
+    gpt2_tokenizer.pad_token = "<pad>"
+    
+    return gpt2_tokenizer
 
 class BabylmDataset(Dataset):
     def __init__(self, data_dir: str, seq_length: int, tokenizer, offset: int=0, random_chunk: bool=False):
@@ -18,7 +53,7 @@ class BabylmDataset(Dataset):
         self.random_chunk = random_chunk
 
         # Change the tokenizer naming to reflect OLMo2
-        tokenizer_name = "OLMo2SuperBPE"
+        tokenizer_name = "GPT2TokenizerFast_16000"
         tokenized_file = Path(os.path.join(data_dir, f"tokenized_{tokenizer_name}.pt"))
 
         if tokenized_file.exists():
@@ -49,7 +84,20 @@ class BabylmDataset(Dataset):
 
     def __getitem__(self, i):
         if self.random_chunk:
-            offset = randrange(self.seq_length) # Sample random offset between 0 and seq_length-1
-            return self.data[i*self.seq_length+offset:(i+1)*self.seq_length+offset]
+            offset = randrange(self.seq_length)
+            tokens = self.data[i*self.seq_length+offset:(i+1)*self.seq_length+offset]
         else:
-            return self.data[i*self.seq_length+self.offset:(i+1)*self.seq_length+self.offset]
+            tokens = self.data[i*self.seq_length+self.offset:(i+1)*self.seq_length+self.offset]
+
+        # Add validation to prevent CUDA errors
+        max_token_id = tokens.max().item()
+        vocab_size = len(self.tokenizer.get_vocab())
+        if max_token_id >= vocab_size:
+            print(f"Warning: Found token ID {max_token_id} exceeds vocab size {vocab_size}")
+            # Clip token IDs to prevent CUDA errors
+            tokens = torch.clamp(tokens, max=vocab_size-1)
+
+        return {
+            "input_ids": tokens,
+            "labels": tokens.clone()
+        }

@@ -49,6 +49,9 @@ export NCCL_TIMEOUT=1800
 export NCCL_P2P_LEVEL=NVL 
 export TORCH_NCCL_TRACE_BUFFER_SIZE=1000
 
+# export CUDA_LAUNCH_BLOCKING=1  # Get synchronous CUDA errors
+export TORCH_USE_CUDA_DSA=1  # Enable device-side assertions
+
 # Monitor GPU status before running
 echo "GPU status before execution:"
 nvidia-smi
@@ -60,7 +63,7 @@ NUM_GPUS=$(nvidia-smi -L | wc -l)
 torchrun --standalone --nproc_per_node=$NUM_GPUS run.py \
   --data_folder=train_10M \
   --model=rwkv \
-  --vocab_size=200000 \
+  --vocab_size=16000 \
   --seq_length=128 \
   --batch_size=16
 # deepspeed --num_gpus=$NUM_GPUS run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128

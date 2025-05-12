@@ -16,11 +16,11 @@ except ImportError:
     def get_accelerator():
         return MockAccelerator()
 
-from babylm_dataset import load_olmo_tokenizer, BabylmDataset
+from babylm_dataset import load_olmo_tokenizer, BabylmDataset, train_tokenizer
 from training.train import train_rwkv_with_pretokenized_data, generate_text, train_llama_with_pretokenized_data
 from model.rwkv import RWKVConfig
 from model.llama import LlamaConfig, LlamaForCausalLM
-
+from training.train_rwkv import train_rwkv
 
 
 parser = argparse.ArgumentParser(description='Preprocessing script')
@@ -80,32 +80,39 @@ def clean_data(data_folder: str = args.data_folder) -> None:
 if __name__ == "__main__":
     SEQ_LENGTH = args.seq_length
     # Clean Training set
-    clean_data(data_folder=args.data_folder)
+    # clean_data(data_folder=args.data_folder)
     # Clean Validation set
-    clean_data(data_folder='dev')
+    # clean_data(data_folder='dev')
     # Train Tokenizer
-    tokenizer = load_olmo_tokenizer()
+    # tokenizer, vocab_size = load_olmo_tokenizer()
+    tokenizer = train_tokenizer(data_folder=args.data_folder, vocab_size=args.vocab_size)
     # Create Dataset
     train_dataset = BabylmDataset(f'./data/{args.data_folder}_cleaned', SEQ_LENGTH, tokenizer=tokenizer, random_chunk=True)
     full_eval_dataset = BabylmDataset('./data/dev_cleaned', SEQ_LENGTH, tokenizer=tokenizer, offset=0)
     
     # Create configuration
-    config = RWKVConfig(
-        vocab_size=args.vocab_size,
-        context_length=1024,
-        hidden_size=512,
-        num_hidden_layers=12,
-    )
+    # config = RWKVConfig(
+    #     vocab_size=args.vocab_size,
+    #     context_length=1024,
+    #     hidden_size=768,
+    #     num_hidden_layers=12,
+    # )
     
     if args.model == 'rwkv':
-        # Training example
-        trainer, model = train_rwkv_with_pretokenized_data(
-            model_config=config,
-            train_file=f"./data/{args.data_folder}_cleaned/tokenized_OLMo2SuperBPE.pt",
-            val_file=f"./data/dev_cleaned/tokenized_OLMo2SuperBPE.pt",
-            output_dir=f"./output/rwkv-trained-model-{args.data_folder}",
-            batch_size=args.batch_size
-        )
+        # Training
+        trainer, model = train_rwkv(tokenizer=tokenizer, 
+                                    train_data=train_dataset, 
+                                    eval_data=full_eval_dataset,
+                                    vocab_size=args.vocab_size)
+        
+        # trainer, model = train_rwkv_with_pretokenized_data(
+        #     model_config=config,
+        #     model_path='fla-hub/rwkv7-1.5B-world',
+        #     train_file=f"./data/{args.data_folder}_cleaned/tokenized_OLMo2SuperBPE.pt",
+        #     val_file=f"./data/dev_cleaned/tokenized_OLMo2SuperBPE.pt",
+        #     output_dir=f"./output/rwkv-trained-model-{args.data_folder}",
+        #     batch_size=args.batch_size
+        # )
     elif args.model == 'llama':
         # Use hardcoded values instead of command-line args
         hidden_size = 768
@@ -130,13 +137,13 @@ if __name__ == "__main__":
         )
     
     # Generate text example
-    generated_text = generate_text(
-        model=model,
-        tokenizer=tokenizer,
-        prompt="How many r in the word 'strawberry'",
-        max_length=100,
-        temperature=0.7,
-        use_rnn_mode=True
-    )
+    # generated_text = generate_text(
+    #     model=model,
+    #     tokenizer=tokenizer,
+    #     prompt="How many r in the word 'strawberry'",
+    #     max_length=100,
+    #     temperature=0.7,
+    #     use_rnn_mode=True
+    # )
     
-    print(generated_text)
+    # print(generated_text)
