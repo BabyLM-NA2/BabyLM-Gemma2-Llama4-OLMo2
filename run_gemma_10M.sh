@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=train_model
+#SBATCH --job-name=train_gemma_10M
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
@@ -27,7 +27,7 @@ export CUDA_VISIBLE_DEVICES=0  # Force single GPU usage
 # Run script
 python run.py \
     --data_folder=train_10M \
-    --model=rwkv \
+    --model=gemma2 \
     --vocab_size=32000 \
     --seq_length=512 \
     --batch_size=32 \
