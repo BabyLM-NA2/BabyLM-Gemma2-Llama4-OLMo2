@@ -13,15 +13,15 @@ export DATA_FOLDER=$1
 module load Anaconda3/2024.02-1
 
 # Check if the conda environment 'babylm' exists
-if conda env list | grep -q 'babylm1'; then
-    echo "Conda environment 'babylm1' already exists."
+if conda env list | grep -q 'babylm2'; then
+    echo "Conda environment 'babylm2' already exists."
 else
-    echo "Conda environment 'babylm1' does not exist. Creating it from environment.yml..."
-    conda env create -f environment.yml -n babylm1
+    echo "Conda environment 'babylm2' does not exist. Creating it from environment.yml..."
+    conda env create -f environment.yml -n babylm2
 fi
 
 # Activate conda environment
-source activate babylm1
+source activate babylm2
 
 # Specify the folder containing Python scripts
 SCRIPT_FOLDER="./preprocessing"

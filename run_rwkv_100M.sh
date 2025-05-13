@@ -3,8 +3,8 @@
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
-#SBATCH --gres=gpu:4
-#SBATCH --gpus-per-node=4
+#SBATCH --gres=gpu:2
+#SBATCH --gpus-per-node=2
 #SBATCH --mem=64G
 #SBATCH --output=./log/train_model_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
@@ -16,26 +16,18 @@ module load CUDA/12.4.0
 module load GCC/12.2.0
 
 # Check if the conda environment 'babylm' exists
-if conda env list | grep -q 'babylm1'; then
-    echo "Conda environment 'babylm1' already exists."
+if conda env list | grep -q 'babylm2'; then
+    echo "Conda environment 'babylm2' already exists."
 else
-    echo "Conda environment 'babylm1' does not exist. Creating it from environment.yml..."
-    conda env create -f environment.yml -n babylm1
+    echo "Conda environment 'babylm2' does not exist. Creating it from environment.yml..."
+    conda env create -f environment.yml -n babylm2
 fi
 
 # Activate conda environment
-source activate babylm1
+source activate babylm2
 conda env export > environment.yml
 
-# Set environment variables for better performance
-export PYTHONUNBUFFERED=1
-export CUDA_DEVICE_MAX_CONNECTIONS=1  # For multi-GPU setups
-export TORCH_EXTENSIONS_DIR=$HOME/.cache/torch_extensions
-
-# Fix for expandable segments (avoid memory fragmentation)
-export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True,max_split_size_mb:64"
-export BNB_CUDA_VERSION=124
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.4/lib64
+export TORCH_USE_CUDA_DSA=1  # Enable device-side assertions
 
 # Monitor GPU status before running
 echo "GPU status before execution:"
@@ -44,9 +36,15 @@ nvidia-smi
 # Run script without distributed launcher (using built-in model parallelism)
 echo "Running run.py with native model parallelism..."
 NUM_GPUS=$(nvidia-smi -L | wc -l)
-# python run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
-torchrun --standalone --nproc_per_node=$NUM_GPUS --log_dir=./log/torch_distributed_logs run.py --data_folder=train_100M --model=rwkv --vocab_size=200000 --seq_length=128 --batch_size=32
-# deepspeed --num_gpus=$NUM_GPUS run.py --data_folder=train_10M --model=rwkv --vocab_size=200000 --seq_length=128
+
+torchrun --standalone --nproc_per_node=$NUM_GPUS run.py \
+  --data_folder=train_100M \
+  --model=rwkv \
+  --vocab_size=48000 \
+  --seq_length=2048 \
+  --batch_size=256 \
+  --hidden_size=1536 \
+  --num_hidden_layers=12
 
 # Check execution status
 if [ $? -eq 0 ]; then
