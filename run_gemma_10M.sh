@@ -16,14 +16,6 @@ module load Anaconda3/2024.02-1
 module load CUDA/12.4.0
 module load GCC/12.2.0
 
-# Check if the conda environment 'babylm' exists
-if conda env list | grep -q 'babylm2'; then
-    echo "Conda environment 'babylm2' already exists."
-else
-    echo "Conda environment 'babylm2' does not exist. Creating it from environment.yml..."
-    conda env create -f environment.yml -n babylm2
-fi
-
 # Activate conda environment
 source activate babylm2
 
@@ -35,7 +27,7 @@ export CUDA_VISIBLE_DEVICES=0  # Force single GPU usage
 # Run script
 python run.py \
     --data_folder=train_10M \
-    --model=llama \
+    --model=rwkv \
     --vocab_size=32000 \
     --seq_length=512 \
     --batch_size=32 \

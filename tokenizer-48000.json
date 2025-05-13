@@ -5,7 +5,7 @@
   "added_tokens": [
     {
       "id": 0,
-      "content": "<pad>",
+      "content": "<|endoftext|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -14,7 +14,7 @@
     },
     {
       "id": 1,
-      "content": "<s>",
+      "content": "<|pad|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -23,7 +23,7 @@
     },
     {
       "id": 2,
-      "content": "</s>",
+      "content": "<|unk|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -62,9 +62,9 @@
     "byte_fallback": false,
     "ignore_merges": false,
     "vocab": {
-      "<pad>": 0,
-      "<s>": 1,
-      "</s>": 2,
+      "<|endoftext|>": 0,
+      "<|pad|>": 1,
+      "<|unk|>": 2,
       "!": 3,
       "'": 4,
       ",": 5,

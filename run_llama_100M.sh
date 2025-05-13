@@ -3,8 +3,8 @@
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
-#SBATCH --gres=gpu:2
-#SBATCH --gpus-per-node=2
+#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=1
 #SBATCH --mem=64G
 #SBATCH --output=./log/train_model_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
@@ -27,34 +27,18 @@ fi
 source activate babylm2
 conda env export > environment.yml
 
-export TORCH_USE_CUDA_DSA=1  # Enable device-side assertions
+# Set critical environment variables
+export CUDA_LAUNCH_BLOCKING=1
+export TORCH_USE_CUDA_DSA=1
+export CUDA_VISIBLE_DEVICES=0  # Force single GPU usage
 
-# Monitor GPU status before running
-echo "GPU status before execution:"
-nvidia-smi
-
-# Run script without distributed launcher (using built-in model parallelism)
-echo "Running run.py with native model parallelism..."
-NUM_GPUS=$(nvidia-smi -L | wc -l)
-
-torchrun --standalone --nproc_per_node=$NUM_GPUS run.py \
+python run.py \
   --data_folder=train_100M \
-  --model=rwkv \
+  --model=llama \
   --vocab_size=48000 \
-  --seq_length=2048 \
-  --batch_size=256 \
-  --hidden_size=1536 \
-  --num_hidden_layers=12
-
-# Check execution status
-if [ $? -eq 0 ]; then
-    echo "Execution completed successfully!"
-else
-    echo "Execution failed with error code $?"
-fi
-
-# Monitor GPU status after running
-echo "GPU status after execution:"
-nvidia-smi
+  --seq_length=1024 \
+  --batch_size=64 \
+  --hidden_size=1024 \
+  --num_hidden_layers=10
 
 echo "Job completed"
