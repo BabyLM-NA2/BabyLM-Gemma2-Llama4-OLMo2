@@ -3,18 +3,11 @@ import torch
 from torch.utils.data import Dataset
 from random import randrange
 from pathlib import Path
-from transformers import AutoTokenizer
 from tokenizers import (Tokenizer, decoders, models, pre_tokenizers,
                         processors, trainers)
 from tokenizers.normalizers import NFKC
 from transformers import GPT2TokenizerFast
 
-
-def load_olmo_tokenizer():
-    """Load the pre-trained OLMo2-8B-SuperBPE tokenizer"""
-    tokenizer = AutoTokenizer.from_pretrained("UW/OLMo2-8B-SuperBPE-t180k")
-    vocab_size = len(tokenizer.get_vocab())
-    return tokenizer, vocab_size
 
 def train_tokenizer(data_folder: str, vocab_size: int = 25000):
     """Train Tokenizer on Training Datasets"""
@@ -46,14 +39,14 @@ def train_tokenizer(data_folder: str, vocab_size: int = 25000):
     return gpt2_tokenizer
 
 class BabylmDataset(Dataset):
-    def __init__(self, data_dir: str, seq_length: int, tokenizer, offset: int=0, random_chunk: bool=False):
+    def __init__(self, data_dir: str, vocab_size: int, seq_length: int, tokenizer, offset: int=0, random_chunk: bool=False):
         self.seq_length = seq_length
+        self.vocab_size = vocab_size
         self.offset = offset
         self.tokenizer = tokenizer
         self.random_chunk = random_chunk
 
-        # Change the tokenizer naming to reflect OLMo2
-        tokenizer_name = "GPT2TokenizerFast_16000"
+        tokenizer_name = f"GPT2TokenizerFast_{vocab_size}"
         tokenized_file = Path(os.path.join(data_dir, f"tokenized_{tokenizer_name}.pt"))
 
         if tokenized_file.exists():
