@@ -1,79 +1,80 @@
-## Cloning a Repository
+# Language Model Training Framework
 
-To begin contributing to a project, you'll first need to clone the repository to your local machine.
+A comprehensive framework for training small language models from scratch using the BabyLM dataset. This project supports multiple modern language model architectures (Gemma2, Llama4, Olmo2) and includes optimized training routines for efficient fine-tuning.
 
-1. **Find the repository you want to clone.**
-   - Go to the repository's page on GitHub (or other Git hosting platforms).
-   - Click on the green **Code** button and copy the URL (HTTPS or SSH).
+## Features
 
-2. **Open your terminal or Git Bash.**
-   
-3. **Clone the repository using the following command:**
+- **Multiple Model Architectures**: Train Gemma2, Llama4, or Olmo2 models
+- **Custom Tokenizer Training**: BPE tokenizer with configurable vocabulary size
+- **Memory-Optimized Training**: Includes CUDA memory management and gradient checkpointing
+- **Robust Error Handling**: Safe data collation and automatic checkpoint saving on errors
+- **Flexible Configuration**: Extensive command-line options for model and training parameters
 
-   ```bash
-   git clone https://github.com/BabyLM-NA2/BabyLM2025.git
-   ```
+## Installation
 
-4. **Navigate into the cloned directory:**
-   
-   ```bash
-   cd BabyLM2025
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/BabyLM-NA2/BabyLM2025.git
+cd BabyLM2025
 
-## Making Changes and Committing
+# Install dependencies
+conda env create -n babylm2 -f environment.yml
+```
 
-Once you’ve cloned the repository, you can make changes to the code.
+## Data
 
-**VDO:** https://www.youtube.com/watch?v=nCKdihvneS0
+This project is designed to work with the BabyLM dataset which can be downloaded at [this OSF directory](https://osf.io/ad7qg/files/osfstorage#). The expected directory structure is:
 
-1. **Create a new branch:**
+```
+data/
+├── train_10M/
+├── train_100M/
+├── dev/
+└── test/
+```
 
-   Before making any changes, it's good practice to create a new branch for your work:
+## Project Structure
 
-   ```bash
-   git checkout -b <branch-name>
-   ```
+- **babylm_dataset.py**: Dataset and tokenizer handling
+- **train.py**: Training utilities and optimization techniques
+- **run.py**: Main execution script with CLI interface
+- **run_preprocess.sh**: Bash script for data preprocessing
 
-   Replace `<branch-name>` with a descriptive name for your branch.
+## Usage
 
-2. **Make your changes** to the code or documentation.
+### Basic Training
 
-3. **Stage your changes:**
+```bash
+bash run_gemma_10M.sh
+```
 
-   ```bash
-   git add .
-   ```
+## Command-Line Arguments
 
-   This stages all the changes you've made. You can also specify individual files instead of `.` to stage specific files.
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--data_folder` | Data folder to process (train_10M, train_100M, dev, test) | train_10M |
+| `--model` | Model architecture (gemma2, llama4, olmo2) | llama4 |
+| `--vocab_size` | Size of vocabulary for tokenizer | 48000 |
+| `--seq_length` | Token context length | 128 |
+| `--batch_size` | Training batch size | 16 |
+| `--epoch` | Number of training epochs | 3 |
+| `--hidden_size` | Model hidden dimension size | 768 |
+| `--num_hidden_layers` | Number of transformer layers | 12 |
+| `--num_attention_heads` | Number of attention heads (for LLaMA) | None |
 
-4. **Commit your changes:**
+## Training Process
 
-   ```bash
-   git commit -m "Description of changes"
-   ```
+1. **Data Cleaning**: Preprocesses the BabyLM dataset using the `run_preprocess.sh` script
+2. **Tokenizer Training**: Trains a custom BPE tokenizer on the cleaned data
+3. **Dataset Creation**: Creates PyTorch datasets for training and evaluation
+4. **Model Configuration**: Sets up the selected model architecture with specified parameters
+5. **Training**: Trains the model with optimization techniques like gradient checkpointing and mixed precision
 
-   Be sure to write a clear and concise commit message describing the changes you made.
+## Memory Optimization
 
-## Pushing Changes to GitHub
+The framework includes several memory optimization techniques for training larger models on limited hardware:
 
-After committing your changes locally, you need to push them to the remote repository.
-
-1. **Push your branch to GitHub:**
-
-   ```bash
-   git push origin <branch-name>
-   ```
-
-   Replace `<branch-name>` with the name of the branch you created earlier.
-
-## Creating a Pull Request
-
-Once your changes are pushed to GitHub, you can create a pull request (PR) to propose your changes to the original repository.
-
-1. **Go to the repository page** on GitHub.
-
-2. **Click the "Compare & pull request" button** next to your branch.
-
-3. **Add a title and description** for your pull request, explaining what changes you made and why they should be merged.
-
-4. **Click "Create pull request"** to submit your PR.
+- Gradient checkpointing to reduce memory usage
+- Regular CUDA cache clearing with the `GradientCallback`
+- Safe data handling to prevent out-of-bounds indices
+- Mixed precision training with fp16
