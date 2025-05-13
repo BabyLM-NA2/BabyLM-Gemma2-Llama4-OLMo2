@@ -83,10 +83,10 @@ if __name__ == "__main__":
     SEQ_LENGTH = args.seq_length
     
     # Clean Training set
-    # clean_data(data_folder=args.data_folder)
+    clean_data(data_folder=args.data_folder)
     
     # Clean Validation set
-    # clean_data(data_folder='dev')
+    clean_data(data_folder='dev')
     
     # Train Tokenizer
     tokenizer = train_tokenizer(data_folder=args.data_folder, vocab_size=args.vocab_size)
