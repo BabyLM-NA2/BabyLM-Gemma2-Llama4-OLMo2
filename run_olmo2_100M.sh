@@ -1,6 +1,5 @@
 #!/bin/bash
-
-#SBATCH --job-name=train_llama_10M
+#SBATCH --job-name=olmo2_100M
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
@@ -26,21 +25,20 @@ fi
 
 # Activate conda environment
 source activate babylm2
+conda env export > environment.yml
 
 # Set critical environment variables
 export CUDA_LAUNCH_BLOCKING=1
 export TORCH_USE_CUDA_DSA=1
 export CUDA_VISIBLE_DEVICES=0  # Force single GPU usage
 
-# Run script
 python run.py \
-    --data_folder=train_10M \
-    --model=llama4 \
-    --vocab_size=32000 \
-    --seq_length=512 \
-    --batch_size=32 \
-    --hidden_size=768 \
-    --num_hidden_layers=6 \
-    --num_attention_heads=8
+  --data_folder=train_100M \
+  --model=olmo2 \
+  --vocab_size=48000 \
+  --seq_length=1024 \
+  --batch_size=64 \
+  --hidden_size=1024 \
+  --num_hidden_layers=10
 
 echo "Job completed"

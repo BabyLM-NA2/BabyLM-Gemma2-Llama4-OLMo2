@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=train_model
+#SBATCH --job-name=train_llama_100M
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
@@ -34,11 +34,12 @@ export CUDA_VISIBLE_DEVICES=0  # Force single GPU usage
 
 python run.py \
   --data_folder=train_100M \
-  --model=llama \
+  --model=llama4 \
   --vocab_size=48000 \
   --seq_length=1024 \
-  --batch_size=64 \
+  --batch_size=32 \
   --hidden_size=1024 \
-  --num_hidden_layers=10
+  --num_hidden_layers=10 \
+  --num_attention_heads=16
 
 echo "Job completed"

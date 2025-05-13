@@ -4,5 +4,6 @@ preprocessed
 __pycache__
 .DS_Store
 my_logs
-tokenizer*.json
 model*
+checkpoint*
+tokenizer-*
