@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=64G
-#SBATCH --output=./log/train_model_%j.log
+#SBATCH --output=./log/train_llama4_10M_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
 #SBATCH --mail-type=ALL
 
@@ -37,10 +37,11 @@ python run.py \
     --data_folder=train_10M \
     --model=llama4 \
     --vocab_size=32000 \
-    --seq_length=512 \
+    --seq_length=256 \
     --batch_size=32 \
-    --hidden_size=768 \
-    --num_hidden_layers=6 \
+    --hidden_size=256 \
+    --epoch=4 \
+    --num_hidden_layers=8 \
     --num_attention_heads=8
 
 echo "Job completed"
