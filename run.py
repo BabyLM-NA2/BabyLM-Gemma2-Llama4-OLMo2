@@ -83,10 +83,10 @@ if __name__ == "__main__":
     SEQ_LENGTH = args.seq_length
     
     # Clean Training set
-    clean_data(data_folder=args.data_folder)
+    # clean_data(data_folder=args.data_folder)
     
     # Clean Validation set
-    clean_data(data_folder='dev')
+    # clean_data(data_folder='dev')
     
     # Train Tokenizer
     tokenizer = train_tokenizer(data_folder=args.data_folder, vocab_size=args.vocab_size)
@@ -118,8 +118,7 @@ if __name__ == "__main__":
             attention_hidden_size=args.hidden_size,
             intermediate_size=4 * args.hidden_size,
             layer_norm_epsilon=1e-5,
-            bos_token_id=0,
-            eos_token_id=0,
+            pad_token_id=tokenizer.convert_tokens_to_ids("<pad>"),
             rescale_every=6,
             tie_word_embeddings=True,
             use_cache=False
@@ -137,8 +136,7 @@ if __name__ == "__main__":
             num_attention_heads=args.num_attention_heads,
             intermediate_size=4 * args.hidden_size,
             layer_norm_epsilon=1e-5,
-            bos_token_id=0,
-            eos_token_id=0,
+            pad_token_id=tokenizer.convert_tokens_to_ids("<pad>"),
             rescale_every=6,
             tie_word_embeddings=True,
             use_cache=False,
@@ -155,8 +153,7 @@ if __name__ == "__main__":
             attention_hidden_size=args.hidden_size,
             intermediate_size=4 * args.hidden_size,
             layer_norm_epsilon=1e-5,
-            bos_token_id=0,
-            eos_token_id=0,
+            pad_token_id=tokenizer.convert_tokens_to_ids("<pad>"),
             rescale_every=6,
             tie_word_embeddings=True,
             use_cache=False,

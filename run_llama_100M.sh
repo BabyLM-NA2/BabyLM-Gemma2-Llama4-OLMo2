@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=train_llama_100M
+#SBATCH --time=30:00:00
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=64G
-#SBATCH --output=./log/train_model_%j.log
+#SBATCH --output=./log/train_llama4_100M_%j.log
 #SBATCH --mail-user=wratthapoom1@sheffield.ac.uk
 #SBATCH --mail-type=ALL
 
@@ -36,10 +37,11 @@ python run.py \
   --data_folder=train_100M \
   --model=llama4 \
   --vocab_size=48000 \
-  --seq_length=1024 \
-  --batch_size=32 \
-  --hidden_size=1024 \
-  --num_hidden_layers=10 \
+  --seq_length=256 \
+  --batch_size=128 \
+  --epoch=6 \
+  --hidden_size=768 \
+  --num_hidden_layers=16 \
   --num_attention_heads=16
 
 echo "Job completed"
