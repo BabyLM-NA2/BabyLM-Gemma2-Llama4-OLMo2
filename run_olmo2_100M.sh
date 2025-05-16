@@ -38,7 +38,7 @@ python run.py \
   --vocab_size=48000 \
   --seq_length=256 \
   --batch_size=128 \
-  --epoch=6 \
+  --epoch=15 \
   --hidden_size=768 \
   --num_hidden_layers=16 \
   --num_attention_heads=16

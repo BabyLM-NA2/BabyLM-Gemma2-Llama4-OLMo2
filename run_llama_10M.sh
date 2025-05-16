@@ -40,7 +40,7 @@ python run.py \
     --seq_length=256 \
     --batch_size=32 \
     --hidden_size=256 \
-    --epoch=4 \
+    --epoch=10 \
     --num_hidden_layers=8 \
     --num_attention_heads=8
 
