@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=olmo2_100M
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu

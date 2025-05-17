@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=train_gemma_100M
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --qos=gpu
